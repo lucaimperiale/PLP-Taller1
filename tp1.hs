@@ -47,13 +47,14 @@ foldMelodia :: (Duracion -> b) ->(Tono -> Duracion -> b) -> (b -> b -> b) -> ([b
 --En el caso de Secuencia y Paralelo como utilizamos recursivamente foldMelodia en el tipo tenemos que usar (b->b->b) En vez de (Melodia->Melodia->b)
 --Despues lo unico que hace la funcion es aplicar el caso correspondiente al resultado recursivo
 
+foldMelodia cS cN cSec cP p = case p of
+                                  (Silencio duracion) -> cS duracion
+                                  (Nota tono duracion) -> cN tono duracion
+                                  (Secuencia m1 m2) -> cSec (rec m1) (rec m2)
+                                  (Paralelo ms) -> cP (map (rec) ms)
+                                  where rec = foldMelodia cS cN cSec cP
 
-foldMelodia casoSilencio casoNota casoSecuencia casoParalelo (Silencio duracion) = casoSilencio duracion
-foldMelodia casoSilencio casoNota casoSecuencia casoParalelo (Nota tono duracion) = casoNota tono duracion
-foldMelodia casoSilencio casoNota casoSecuencia casoParalelo (Secuencia m1 m2) = casoSecuencia (rec m1) (rec m2)
-  where rec = foldMelodia casoSilencio casoNota casoSecuencia casoParalelo
-foldMelodia casoSilencio casoNota casoSecuencia casoParalelo (Paralelo ms) = casoParalelo (map (rec) ms) 
-  where rec = foldMelodia casoSilencio casoNota casoSecuencia casoParalelo
+
 
 -- Ejercicio 4
 --En este ejercicio es simplemente aplicar la funcion foldMelodia, cambiando las funciones que toma como argumento.
@@ -97,9 +98,9 @@ data Evento = On Instante Tono | Off Instante Tono deriving (Show, Eq)
 --Sugerencia: usar listas por comprensión. No repetir eventos.
 cambios :: Instante->[Tono]->[Tono]->[Evento]
 cambios i tonos1 tonos2 = map (\x -> if elem x ts1 then Off i x else On i x)[x | x<- ts1 ++ ts2, (elem x ts1 && not (elem x ts2) ) || (not (elem x ts1) && elem x ts2)]  
-	where 
-		ts1 = nub tonos1
-		ts2 = nub tonos2
+  where 
+  ts1 = nub tonos1
+  ts2 = nub tonos2
 
 
 
