@@ -36,11 +36,6 @@ canon duracion n m1 = foldNat m1 (\r -> superponer m1 duracion r) (n-1)
 secuenciar :: [Melodia] -> Melodia--Se asume que la lista no es vacía.
 secuenciar = foldr1 (Secuencia) 
 
--- [m1,m2,m3]
-
--- secuencia m1 (secuencia m2 m3)
--- secuencia (secuencia m1 m2) m3
-
 -- Ejercicio 2
 
 canonInfinito :: Duracion->Melodia->Melodia
@@ -90,11 +85,11 @@ notasQueSuenan :: Instante->Melodia->[Tono]
 
 
 
-notasQueSuenan n p | n<= 0 = []
+notasQueSuenan n p | n < 0 = []
 notasQueSuenan n p = case p of
   (Silencio d) -> []
-  (Nota t d) -> if n <= d then [t] else []
-  (Secuencia m1 m2) -> if duracionTotal m1 >= n then notasQueSuenan n m1 else notasQueSuenan (n-duracionTotal m1) m2
+  (Nota t d) -> if n < d then [t] else []
+  (Secuencia m1 m2) -> if duracionTotal m1 > n then notasQueSuenan n m1 else notasQueSuenan (n-duracionTotal m1) m2
   (Paralelo ms) -> nub $ concatMap (notasQueSuenan n) ms
 
 
@@ -114,21 +109,24 @@ notasQueSuenan n p = case p of
 data Evento = On Instante Tono | Off Instante Tono deriving (Show, Eq)
 
 --Sugerencia: usar listas por comprensión. No repetir eventos.
-cambios :: Instante->[Tono]->[Tono]->[Evento]
-cambios i tonos1 tonos2 = map (\x -> if elem x ts1 then Off i x else On i x)[x | x<- ts1 ++ ts2, (elem x ts1 && not (elem x ts2) ) || (not (elem x ts1) && elem x ts2)]  
+cambios :: [Tono]->[Tono]->Instante->[Evento]
+cambios tonos1 tonos2 i = [if elem x ts1 then Off i x else On i x | x<- ts1 ++ ts2, (elem x ts1 && not (elem x ts2) ) || (not (elem x ts1) && elem x ts2)]  
   where 
   ts1 = nub tonos1
   ts2 = nub tonos2
 
 
 
---Sugerencia: usar foldl sobre la lista de 0 a la duración.
+--Sugerencia: usar foldl sobre la lista de 0 a la duración. 
 eventosPorNotas :: (Instante->[Tono])->Duracion->[Evento]
-eventosPorNotas fnotas d = foldl (\rec x -> rec ++ cambios x (fnotas x) (fnotas $ x+1)) [] [0..d] --Al final de la duracion se tienen que "apagar" las notas,
--- pensamos varias formas de hacer eso pero al final la mas intuitiva que se nos ocurrio fue comprar cambios con una lista vacia
+eventosPorNotas fnotas d = foldl (\rec x -> rec ++ cambios (fnotas $ x-1) (fnotas x) x) [] [0..d] 
 
+
+
+--Al final de la duracion se tienen que "apagar" las notas,
+-- pensamos varias formas de hacer eso pero al final la mas intuitiva que se nos ocurrio fue comprar cambios con una lista vacia
 eventos :: Melodia -> Duracion -> [Evento]
-eventos m1 d = eventosPorNotas (\x -> notasQueSuenan x m1) d ++ cambios (d+1) (notasQueSuenan (d+1) m1) []
+eventos m1 d = eventosPorNotas (flip notasQueSuenan m1) d ++ cambios (notasQueSuenan (d+1) m1) [] (d+1) 
 
 -- GENERADOR
 
@@ -291,7 +289,8 @@ testsEj1 = test [
 --secuenciar
   secuenciar [doremi] ~=? doremi,
   secuenciar [doremi, acorde] ~=? Secuencia doremi acorde,
-  secuenciar [doremi, acorde, mezcla] ~=? Secuencia (Secuencia doremi acorde) mezcla
+  -- secuenciar [doremi, acorde, mezcla] ~=? Secuencia (Secuencia doremi acorde) mezcla
+  secuenciar [doremi, acorde, mezcla] ~=? Secuencia doremi (Secuencia acorde mezcla) 
   ]
 testsEj2 = test [
 --canonInfinito
@@ -341,7 +340,8 @@ testsEj5 = test [
 --notasQueSuenan
   notasQueSuenan (-1) silencio10 ~=? [],
   notasQueSuenan 5 silencio10 ~=? [],
-  notasQueSuenan 0 doremi ~=? [],
+  notasQueSuenan 0 doremi ~=? [60],
+  notasQueSuenan 3 doremi ~=? [62],
   notasQueSuenan 1 acorde ~=? [60],
   notasQueSuenan 4 acorde ~=? [60,64],
   notasQueSuenan 8 acorde ~=? [60,64,67],
@@ -349,13 +349,13 @@ testsEj5 = test [
   ]
 testsEj6 = test [
 --cambios
-  cambios 50 [] [] ~=? [],
-  cambios 10 [] [5] ~=? [On 10 5],
-  cambios 5 [] [1,2,3] ~=? [On 5 1, On 5 2, On 5 3],
-  cambios 10 [5] [] ~=? [Off 10 5],
-  cambios 5 [1,2,3] [] ~=? [Off 5 1, Off 5 2, Off 5 3],
-  cambios 1 [1,2,3,4,5] [1,2,7,5,7,4,9] ~=? [Off 1 3, On 1 7, On 1 9],
---eventosPorNotas
+  cambios [] [] 50 ~=? [],
+  cambios [] [5] 10 ~=? [On 10 5],
+  cambios [] [1,2,3] 5 ~=? [On 5 1, On 5 2, On 5 3],
+  cambios [5] [] 10 ~=? [Off 10 5],
+  cambios [1,2,3] [] 5 ~=? [Off 5 1, Off 5 2, Off 5 3],
+  cambios [1,2,3,4,5] [1,2,7,5,7,4,9] 1 ~=? [Off 1 3, On 1 7, On 1 9],
+--eventosPorNotas ( Instante -> [Tono])
   eventosPorNotas (flip notasQueSuenan doremi) 0 ~=? [On 0 60],
   eventosPorNotas (flip notasQueSuenan doremi) 8 ~=? [On 0 60,Off 3 60,On 3 62,Off 4 62,On 4 64,Off 7 64,On 7 60,Off 8 60,On 8 64],
   eventosPorNotas (flip notasQueSuenan doremi) 16 ~=? [On 0 60,Off 3 60,On 3 62,Off 4 62,On 4 64,Off 7 64,On 7 60,Off 8 60,On 8 64,Off 10 64,On 10 60,Off 12 60,On 12 64,Off 16 64],
