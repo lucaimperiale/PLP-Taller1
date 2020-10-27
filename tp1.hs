@@ -34,12 +34,18 @@ canon :: Duracion->Integer->Melodia->Melodia
 canon duracion n m1 = foldNat m1 (\r -> superponer m1 duracion r) (n-1)
 
 secuenciar :: [Melodia] -> Melodia--Se asume que la lista no es vacía.
-secuenciar = foldl1 (\r x -> Secuencia r x)
+secuenciar = foldr1 (Secuencia) 
+
+-- [m1,m2,m3]
+
+-- secuencia m1 (secuencia m2 m3)
+-- secuencia (secuencia m1 m2) m3
 
 -- Ejercicio 2
 
 canonInfinito :: Duracion->Melodia->Melodia
-canonInfinito duracion m1 = foldr (\x r -> superponer x duracion r) m1 (repeat m1)
+
+canonInfinito duracion m1 = foldr (\_ r -> superponer m1 duracion r) m1 [0..]
 
 -- Ejercicio 3
 
@@ -51,7 +57,7 @@ foldMelodia cS cN cSec cP p = case p of
                                   (Silencio duracion) -> cS duracion
                                   (Nota tono duracion) -> cN tono duracion
                                   (Secuencia m1 m2) -> cSec (rec m1) (rec m2)
-                                  (Paralelo ms) -> cP (map (rec) ms)
+                                  (Paralelo ms) -> cP (map rec ms)
                                   where rec = foldMelodia cS cN cSec cP
 
 
@@ -61,19 +67,20 @@ foldMelodia cS cN cSec cP p = case p of
 --Se podrian haber escrito de forma mas compacta (fold (id) (id) etc..) , pero usando funciones lambda consideramos que quedaba mas declarativo.
 
 mapMelodia :: (Tono -> Tono)->Melodia->Melodia
-mapMelodia fTono = foldMelodia (\duracion -> Silencio duracion) (\tono duracion -> Nota (fTono tono) duracion) (\m1 m2 -> Secuencia m1 m2) (\ms -> Paralelo ms)
+mapMelodia fTono = foldMelodia (Silencio) (\tono duracion -> Nota (fTono tono) duracion) (Secuencia) (Paralelo)
 
 transportar :: Integer -> Melodia -> Melodia
-transportar n m1 = mapMelodia ((+) n) m1
+transportar n = mapMelodia ((+) n)
 
 duracionTotal :: Melodia->Duracion
-duracionTotal = foldMelodia (\duracion -> duracion) (\tono duracion -> duracion) (\m1 m2 -> m1 + m2) (\ms -> maximum ms)   
+duracionTotal = foldMelodia (id) (\tono duracion -> duracion) (+) (safeMaximum)
+  where safeMaximum x = if x == [] then 0 else maximum x
 
 cambiarVelocidad :: Float->Melodia->Melodia--Sugerencia: usar round y fromIntegral
-cambiarVelocidad factor m1 = foldMelodia (\duracion -> Silencio (round (fromIntegral(duracion) * factor))) (\tono duracion -> Nota (tono) (round (fromIntegral(duracion) * factor))) (\m1 m2 -> Secuencia m1 m2) (\ms -> Paralelo ms) m1
+cambiarVelocidad factor  = foldMelodia (\duracion -> Silencio (round (fromIntegral duracion * factor))) (\tono duracion -> Nota tono (round (fromIntegral duracion * factor))) (Secuencia) (Paralelo)
 
 invertir :: Melodia -> Melodia
-invertir = foldMelodia (\duracion -> Silencio duracion) (\tono duracion -> Nota tono duracion) (\m1 m2 -> Secuencia m2 m1) (\ms -> Paralelo ms) 
+invertir = foldMelodia (Silencio) (Nota) (flip Secuencia) (Paralelo) 
 
 -- Ejercicio 5
 
@@ -219,6 +226,16 @@ cangrejo2 = secuenciar $ (map (\(d, f)->f d)) $
                 (1, _si), (1, _la), (1, _sol), (1, _fa)]
             ++ [(1, _mi), (1, _re), (1, _mi), (1, _sol),
                 (1, _do2), (1, _sol), (1, _fa), (1, _sol)]
+cangrejoP = Paralelo $ 
+         [Silencio 4, _do 2, _mib 2]
+      ++ [_sol 2, _lab 4, Silencio 2]
+      ++ [_si0 4, Silencio 2, _sol 4] 
+      ++ [_fas 4, _fa 4]              
+      ++ [_mi 2, Silencio 2, _mib 4]  
+      ++ [_re 2, _reb 2, _do 2]
+      ++ [_si0 2, _sol0 2, _do 2, _fa 2]
+      ++ [_mib 2, _re 4, Silencio 2]
+      ++ [_do 2, _mi 2, Silencio 4]
                 
 cangrejo = Secuencia c (invertir c)
   where c = Paralelo [cangrejo1, cangrejo2]
@@ -276,10 +293,10 @@ testsEj2 = test [
   sort(notasQueSuenan 51 (canonInfinito 1 doremi)) ~=? [60,62,64]
   ]
 testsEj3 = test [
-  foldMelodia (\d -> Silencio d) (\t d -> Nota t d) (\m1 m2 -> Secuencia m1 m2) (\ms -> Paralelo ms) silencio10 ~=? silencio10,
-  foldMelodia (\d -> Silencio d) (\t d -> Nota t d) (\m1 m2 -> Secuencia m1 m2) (\ms -> Paralelo ms) do10 ~=? do10,
-  foldMelodia (\d -> Silencio d) (\t d -> Nota t d) (\m1 m2 -> Secuencia m1 m2) (\ms -> Paralelo ms) doremi ~=? doremi,
-  foldMelodia (\d -> Silencio d) (\t d -> Nota t d) (\m1 m2 -> Secuencia m1 m2) (\ms -> Paralelo ms) acorde ~=? acorde
+  foldMelodia (Silencio) (Nota) (Secuencia) (Paralelo ) silencio10 ~=? silencio10,
+  foldMelodia (Silencio) (Nota) (Secuencia) (Paralelo ) do10 ~=? do10,
+  foldMelodia (Silencio) (Nota) (Secuencia) (Paralelo ) doremi ~=? doremi,
+  foldMelodia (Silencio) (Nota) (Secuencia) (Paralelo ) acorde ~=? acorde
   ]
 testsEj4 = test [
  --mapMelodia
@@ -295,6 +312,9 @@ testsEj4 = test [
   duracionTotal acorde ~=? 10,
   duracionTotal doremi ~=? 16,
   duracionTotal mezcla ~=? 56,
+  duracionTotal cangrejo1 ~=? 72,
+  duracionTotal cangrejoP ~=? 4,
+  duracionTotal (Paralelo []) ~=? 0,
 --cambiarVelocidad
   cambiarVelocidad 2 silencio10 ~=? silencio20,
   cambiarVelocidad 0.5 silencio20 ~=? silencio10,
