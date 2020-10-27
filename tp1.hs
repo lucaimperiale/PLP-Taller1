@@ -88,11 +88,22 @@ invertir = foldMelodia (Silencio) (Nota) (flip Secuencia) (Paralelo)
 notasQueSuenan :: Instante->Melodia->[Tono]
 --Sugerencia: usar concatMap.
 
-notasQueSuenan 0 _ = []
-notasQueSuenan _ (Silencio d) = []
-notasQueSuenan n (Nota t d) = if n <= d then [t] else []
-notasQueSuenan n (Secuencia m1 m2) = if duracionTotal m1 >= n then notasQueSuenan n m1 else notasQueSuenan (n-duracionTotal m1) m2  
-notasQueSuenan n (Paralelo ms) = nub $ concatMap (notasQueSuenan n) ms
+
+
+notasQueSuenan n p | n<= 0 = []
+notasQueSuenan n p = case p of
+  (Silencio d) -> []
+  (Nota t d) -> if n <= d then [t] else []
+  (Secuencia m1 m2) -> if duracionTotal m1 >= n then notasQueSuenan n m1 else notasQueSuenan (n-duracionTotal m1) m2
+  (Paralelo ms) -> nub $ concatMap (notasQueSuenan n) ms
+
+
+
+--notasQueSuenan 0 _ = []
+--notasQueSuenan _ (Silencio d) = []
+--notasQueSuenan n (Nota t d) = if n <= d then [t] else []
+--notasQueSuenan n (Secuencia m1 m2) = if duracionTotal m1 >= n then notasQueSuenan n m1 else notasQueSuenan (n-duracionTotal m1) m2  
+--notasQueSuenan n (Paralelo ms) = nub $ concatMap (notasQueSuenan n) ms
 --En este ejercicio vimos de que manera hay que ver si el instante estaba dentro de la melodia dependiendo de la entrada, el unico caso no obvio es Secuencia donde tuvimos que ver si el isntante caia en m1 o m2
 --No se podria usar foldMelodia, ya que se tiene que tomar en cuenta el n dentro de la recursion, y no habria forma de pasarlo como parametro de las funciones.
 --Intentando que el fold devulva una funcion (Instante -> [Tono]) tendriamos el mismo problema, no podriamos pasar el n en el caso recursivo.
@@ -328,6 +339,7 @@ testsEj4 = test [
   ]
 testsEj5 = test [
 --notasQueSuenan
+  notasQueSuenan (-1) silencio10 ~=? [],
   notasQueSuenan 5 silencio10 ~=? [],
   notasQueSuenan 0 doremi ~=? [],
   notasQueSuenan 1 acorde ~=? [60],
