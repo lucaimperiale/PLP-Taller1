@@ -126,7 +126,7 @@ eventosPorNotas fnotas d = foldl (\rec x -> rec ++ cambios (fnotas $ x-1) (fnota
 --Al final de la duracion se tienen que "apagar" las notas,
 -- pensamos varias formas de hacer eso pero al final la mas intuitiva que se nos ocurrio fue comprar cambios con una lista vacia
 eventos :: Melodia -> Duracion -> [Evento]
-eventos m1 d = eventosPorNotas (flip notasQueSuenan m1) d ++ cambios (notasQueSuenan (d+1) m1) [] (d+1) 
+eventos m1 d = eventosPorNotas (flip notasQueSuenan m1) d ++ cambios (notasQueSuenan (d) m1) [] (d+1) 
 
 -- GENERADOR
 
@@ -245,6 +245,14 @@ cangrejoP = Paralelo $
       ++ [_si0 2, _sol0 2, _do 2, _fa 2]
       ++ [_mib 2, _re 4, Silencio 2]
       ++ [_do 2, _mi 2, Silencio 4]
+
+melodiaTest1 = Paralelo [doremi,acorde]
+melodiaTest2 = Paralelo [Secuencia (Silencio 5) (_mi 5), Secuencia (Silencio 1) (_do 2)]
+melodiaTest3 = secuenciar $ 
+            [Silencio 2, _do 2, Silencio 2]
+        ++  [Silencio 2, _do 2, Silencio 2]
+        ++  [Silencio 2, _do 2, Silencio 2]
+melodiaTest4 = Paralelo [doremi,rebmibfa]    
                 
 cangrejo = Secuencia c (invertir c)
   where c = Paralelo [cangrejo1, cangrejo2]
@@ -367,5 +375,16 @@ testsEj6 = test [
 --eventos
   eventos acorde 6 ~=? [On 0 60,On 3 64,On 6 67,Off 7 60,Off 7 64,Off 7 67],
   eventos doremi 5 ~=? [On 0 60,Off 3 60,On 3 62,Off 4 62,On 4 64,Off 6 64],
-  eventos acorde 10 ~=? [On 0 60,On 3 64,On 6 67,Off 10 60,Off 10 64,Off 10 67]  
+  eventos acorde 10 ~=? [On 0 60,On 3 64,On 6 67,Off 10 60,Off 10 64,Off 10 67],
+  eventos melodiaTest1 0 ~=? [On 0 60, Off 1 60],
+  eventos melodiaTest1 1 ~=? [On 0 60, Off 2 60],
+  eventos melodiaTest1 3 ~=? [On 0 60, On 3 64, On 3 62,Off 4 60, Off 4 64, Off 4 62],
+  eventos melodiaTest1 3 ~=? [On 0 60, On 3 62, On 3 64,Off 4 60, Off 4 62, Off 4 64]
   ]
+
+{-melodiaTest1 = Paralelo doremi acorde
+melodiaTest2 = Paralelo (Secuencia (Silencio 5) (_mi 5)) (Secuencia (Silencio 1)(_do 2)
+melodiaTest3 = secuenciar $ 
+            [Silencio 2, _do 2, Silencio 2]
+          ++[Silencio 2, _do 2, Silencio 2]
+          ++[Silencio 2, _do 2, Silencio 2]  -}
