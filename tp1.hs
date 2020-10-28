@@ -117,16 +117,16 @@ cambios tonos1 tonos2 i = [if elem x ts1 then Off i x else On i x | x<- ts1 ++ t
 
 
 
---Sugerencia: usar foldl sobre la lista de 0 a la duración. 
-eventosPorNotas :: (Instante->[Tono])->Duracion->[Evento]
-eventosPorNotas fnotas d = foldl (\rec x -> rec ++ cambios (fnotas $ x-1) (fnotas x) x) [] [0..d] 
-
-
-
+--Sugerencia: usar foldl sobre la lista de 0 a la duración.
 --Al final de la duracion se tienen que "apagar" las notas,
--- pensamos varias formas de hacer eso pero al final la mas intuitiva que se nos ocurrio fue comprar cambios con una lista vacia
+-- pensamos varias formas de hacer eso pero al final la mas intuitiva que se nos ocurrio fue comprar cambios con una lista vacia  
+eventosPorNotas :: (Instante->[Tono])->Duracion->[Evento]
+eventosPorNotas fnotas d = (foldl (\rec x -> rec ++ cambios (fnotas $ x-1) (fnotas x) x) [] [0..d]) ++ (cambios (fnotas d) [] (d+1))
+
+
+
 eventos :: Melodia -> Duracion -> [Evento]
-eventos m1 d = eventosPorNotas (flip notasQueSuenan m1) d ++ cambios (notasQueSuenan (d) m1) [] (d+1) 
+eventos m1 d = eventosPorNotas (flip notasQueSuenan m1) d 
 
 -- GENERADOR
 
@@ -364,22 +364,18 @@ testsEj6 = test [
   cambios [1,2,3] [] 5 ~=? [Off 5 1, Off 5 2, Off 5 3],
   cambios [1,2,3,4,5] [1,2,7,5,7,4,9] 1 ~=? [Off 1 3, On 1 7, On 1 9],
 --eventosPorNotas ( Instante -> [Tono])
-  eventosPorNotas (flip notasQueSuenan doremi) 0 ~=? [On 0 60],
-  eventosPorNotas (flip notasQueSuenan doremi) 8 ~=? [On 0 60,Off 3 60,On 3 62,Off 4 62,On 4 64,Off 7 64,On 7 60,Off 8 60,On 8 64],
+  eventosPorNotas (flip notasQueSuenan doremi) 0 ~=? [On 0 60,Off 1 60],
+  eventosPorNotas (flip notasQueSuenan doremi) 8 ~=? [On 0 60,Off 3 60,On 3 62,Off 4 62,On 4 64,Off 7 64,On 7 60,Off 8 60,On 8 64,Off 9 64],
   eventosPorNotas (flip notasQueSuenan doremi) 16 ~=? [On 0 60,Off 3 60,On 3 62,Off 4 62,On 4 64,Off 7 64,On 7 60,Off 8 60,On 8 64,Off 10 64,On 10 60,Off 12 60,On 12 64,Off 16 64],
   eventosPorNotas (flip notasQueSuenan doremi) 20 ~=? [On 0 60,Off 3 60,On 3 62,Off 4 62,On 4 64,Off 7 64,On 7 60,Off 8 60,On 8 64,Off 10 64,On 10 60,Off 12 60,On 12 64,Off 16 64],
-  eventosPorNotas (flip notasQueSuenan acorde) 1 ~=? [On 0 60],
-  eventosPorNotas (flip notasQueSuenan acorde) 4 ~=? [On 0 60,On 3 64],
-  eventosPorNotas (flip notasQueSuenan acorde) 6 ~=? [On 0 60,On 3 64,On 6 67],
+  eventosPorNotas (flip notasQueSuenan acorde) 1 ~=? [On 0 60,Off 2 60],
+  eventosPorNotas (flip notasQueSuenan acorde) 4 ~=? [On 0 60,On 3 64,Off 5 60,Off 5 64],
+  eventosPorNotas (flip notasQueSuenan acorde) 6 ~=? [On 0 60,On 3 64,On 6 67,Off 7 60,Off 7 64,Off 7 67],
   eventosPorNotas (flip notasQueSuenan acorde) 10 ~=? [On 0 60,On 3 64,On 6 67,Off 10 60,Off 10 64,Off 10 67],
 --eventos
   eventos acorde 6 ~=? [On 0 60,On 3 64,On 6 67,Off 7 60,Off 7 64,Off 7 67],
   eventos doremi 5 ~=? [On 0 60,Off 3 60,On 3 62,Off 4 62,On 4 64,Off 6 64],
-  eventos acorde 10 ~=? [On 0 60,On 3 64,On 6 67,Off 10 60,Off 10 64,Off 10 67],
-  eventos melodiaTest1 0 ~=? [On 0 60, Off 1 60],
-  eventos melodiaTest1 1 ~=? [On 0 60, Off 2 60],
-  eventos melodiaTest1 3 ~=? [On 0 60, On 3 64, On 3 62,Off 4 60, Off 4 64, Off 4 62],
-  eventos melodiaTest1 3 ~=? [On 0 60, On 3 62, On 3 64,Off 4 60, Off 4 62, Off 4 64]
+  eventos acorde 10 ~=? [On 0 60,On 3 64,On 6 67,Off 10 60,Off 10 64,Off 10 67]
   ]
 
 {-melodiaTest1 = Paralelo doremi acorde
